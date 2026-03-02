@@ -1,0 +1,187 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Esci con me?</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            color: white; 
+            text-align: center; 
+            padding: 20px; 
+            position: relative; 
+            overflow: hidden; 
+        }
+        h1 { font-size: 2.5em; margin-bottom: 40px; word-break: break-word; z-index: 10; position: relative; }
+        .btn-container { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+        .btn { 
+            padding: 15px 30px; 
+            font-size: 1.2em; 
+            border: none; 
+            border-radius: 50px; 
+            cursor: pointer; 
+            transition: all 0.5s ease; 
+            min-width: 140px; 
+        }
+        .btn-yes { background: #4CAF50; }
+        .btn-no { background: #f44336; }
+        .btn:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .btn-random { position: absolute; z-index: 5; transition: all 0.5s ease; }
+        .btn-central { position: static; margin: 10px; }
+        .hidden { display: none; }
+        #success { background: #4CAF50; }
+        .success-info { font-size: 1.1em; margin: 10px 0; color: #000; }
+        @media (max-width: 600px) { 
+            h1 { font-size: 2em; margin-bottom: 30px; } 
+            .btn { font-size: 1em; padding: 12px 24px; min-width: 120px; }
+            .btn-random { position: static !important; margin: 10px auto !important; display: block; }
+            .btn-container { flex-direction: column; align-items: center; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="main">
+        <h1 id="main-text">Ti va di uscire?</h1>
+        <div class="btn-container">
+            <button class="btn btn-yes accettazione-btn" onclick="handleAccettazione('main')">Sì</button>
+            <button class="btn btn-no" onclick="goToConfirm()">No</button>
+        </div>
+    </div>
+
+    <div id="confirm" class="hidden">
+        <h1 id="confirm-text">Sei sicura?</h1>
+        <button id="btn-yes-confirm" class="btn btn-yes btn-central" onclick="handleRifiuto()">Sì, sono sicura</button>
+        <button id="btn-no-confirm" class="btn btn-no btn-central" onclick="goToSecondMain()">No, non sono sicura</button>
+    </div>
+
+    <div id="success" class="hidden">
+        <h1>BENE! 😎</h1>
+        <div class="success-info" id="success-details"></div>
+        <button class="btn btn-yes" onclick="reset()">Riprova</button>
+    </div>
+
+    <script>
+        let numSicuraRipetute = 0;
+        let hasRandomized = false;
+
+        // SESSION-ONLY (cancella alla chiusura)
+        function saveSession() {
+            sessionStorage.setItem('numSicuraRipetute', numSicuraRipetute);
+        }
+
+        function loadSession() {
+            numSicuraRipetute = parseInt(sessionStorage.getItem('numSicuraRipetute') || '0');
+        }
+
+        // CANCELLA TUTTO alla chiusura tab/browser
+        window.addEventListener('beforeunload', function() {
+            sessionStorage.removeItem('numSicuraRipetute');
+            sessionStorage.removeItem('accettazioni');
+        });
+
+        loadSession();
+
+        async function handleAccettazione(from) {
+            let accettazioni = parseInt(sessionStorage.getItem('accettazioni') || '0') + 1;
+            const totaleSicura = 1 + numSicuraRipetute;
+            sessionStorage.setItem('accettazioni', accettazioni);
+
+            console.log(`ACCETTAZIONE #${accettazioni} dopo ${totaleSicura} sicura`);
+
+            if (DISCORD_WEBHOOK !== 'YOUR_DISCORD_WEBHOOK_URL') {
+                await fetch(DISCORD_WEBHOOK, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        content: `✅ **ACCETTAZIONE #${accettazioni}!** \nTotale "sicura": ${totaleSicura}\nOra: ${new Date().toLocaleString('it-IT')}`
+                    })
+                });
+            }
+
+            showSuccess(accettazioni, totaleSicura);
+        }
+
+        function handleRifiuto() {
+            numSicuraRipetute++;
+            saveSession();
+            console.log('Ripetizioni:', numSicuraRipetute);
+
+            const btn = document.getElementById('btn-yes-confirm');
+            if (btn.classList.contains('btn-central')) {
+                btn.classList.remove('btn-central');
+                btn.classList.add('btn-random');
+            }
+            randomizeButton();
+
+            updateConfirmText();
+        }
+
+        function randomizeButton() {
+            const btn = document.getElementById('btn-yes-confirm');
+            const rect = document.body.getBoundingClientRect();
+            const maxX = rect.width - btn.offsetWidth - 40;
+            const maxY = rect.height - btn.offsetHeight - 120;
+            btn.style.left = Math.max(20, Math.random() * maxX) + 'px';
+            btn.style.top = Math.max(120, Math.random() * maxY) + 'px';
+            btn.style.position = 'absolute';
+        }
+
+        function goToConfirm() {
+            hasRandomized = false;
+            const btnYes = document.getElementById('btn-yes-confirm');
+            btnYes.classList.remove('btn-random');
+            btnYes.classList.add('btn-central');
+            btnYes.style.position = '';
+            btnYes.style.left = '';
+            btnYes.style.top = '';
+            updateConfirmText();
+            document.getElementById('confirm').classList.remove('hidden');
+            document.getElementById('main').classList.add('hidden');
+        }
+
+        function goToSecondMain() {
+            document.getElementById('main-text').textContent = `Quindi vuoi uscire con me?`;
+            document.getElementById('confirm').classList.add('hidden');
+            document.getElementById('main').classList.remove('hidden');
+            hasRandomized = false;
+        }
+
+        function updateConfirmText() {
+            const totale = 1 + numSicuraRipetute;
+            let text = "Sei ";
+            for (let i = 0; i < totale; i++) {
+                text += "sicura ";
+            }
+            text += "?";
+            document.getElementById('confirm-text').textContent = text;
+        }
+
+        function showSuccess(accettazioni, totaleSicura) {
+            document.getElementById('success-details').innerHTML = `
+                🎉 ACCETTAZIONE #${accettazioni}`;
+            document.querySelectorAll('#main, #confirm').forEach(el => el.classList.add('hidden'));
+            document.getElementById('success').classList.remove('hidden');
+        }
+
+        function reset() {
+            document.getElementById('success').classList.add('hidden');
+            document.getElementById('main-text').textContent = "Ti va di uscire?";
+            document.getElementById('main').classList.remove('hidden');
+            hasRandomized = false;
+            const btnYes = document.getElementById('btn-yes-confirm');
+            btnYes.classList.remove('btn-random');
+            btnYes.classList.add('btn-central');
+            btnYes.style.position = '';
+        }
+    </script>
+</body>
+</html>
